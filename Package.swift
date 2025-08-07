@@ -7,18 +7,13 @@ let package = Package(
     name: "Keychain",
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
-        .library(
-            name: "Keychain",
-            targets: ["Keychain"]),
+        .library(name: "Keychain", targets: ["Keychain"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/Vaida12345/Essentials.git", from: "1.1.4"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
-        .target(
-            name: "Keychain"),
-        .testTarget(
-            name: "KeychainTests",
-            dependencies: ["Keychain"]
-        ),
+        .target(name: "Keychain", dependencies: ["Essentials"]),
+        .testTarget(name: "KeychainTests", dependencies: ["Keychain"]),
     ]
 )
