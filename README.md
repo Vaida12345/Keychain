@@ -26,7 +26,8 @@ extension Keychain.Key {
 }
 ```
 
-- Warning: You must not reuse an identifier, doing so will cause undefined behavior.
+> Warning:
+> You must not reuse an identifier, doing so will cause undefined behavior.
 
 
 ## Getting Started
