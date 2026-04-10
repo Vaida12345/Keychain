@@ -20,12 +20,12 @@ extension Keychain {
     ///
     /// - throws: `KeychainError` when the entry cannot be located.
     public func load(_ key: Keychain.Key<Data>) async throws(KeychainError) -> Data {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: self.service,
-            kSecAttrAccount as String: key.identifier,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecReturnData as String: true
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: self.service,
+            kSecAttrAccount: key.identifier,
+            kSecMatchLimit: kSecMatchLimitOne,
+            kSecReturnData: true
         ]
         
         var item: CFTypeRef?
@@ -44,11 +44,12 @@ extension Keychain {
     ///
     /// - throws: `KeychainError` when the `newValue` cannot be stored in keychain.
     public func update(_ key: Keychain.Key<Data>, to newValue: Data) async throws(KeychainError) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: self.service,
-            kSecAttrAccount as String: key.identifier,
-            kSecValueData as String: newValue
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: self.service,
+            kSecAttrAccount: key.identifier,
+            kSecValueData: newValue,
+            kSecUseDataProtectionKeychain: true
         ]
         
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -56,10 +57,10 @@ extension Keychain {
         
         if status == -25299 {
             // update the entry
-            let query: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: self.service,
-                kSecAttrAccount as String: key.identifier
+            let query: [CFString: Any] = [
+                kSecClass: kSecClassGenericPassword,
+                kSecAttrService: self.service,
+                kSecAttrAccount: key.identifier
             ]
             
             let payload: [String: Any] = [kSecValueData as String: newValue]
