@@ -25,7 +25,8 @@ extension Keychain {
             kSecAttrService: self.service,
             kSecAttrAccount: key.identifier,
             kSecMatchLimit: kSecMatchLimitOne,
-            kSecReturnData: true
+            kSecReturnData: true,
+            kSecUseDataProtectionKeychain: true,
         ]
         
         var item: CFTypeRef?
@@ -60,7 +61,8 @@ extension Keychain {
             let query: [CFString: Any] = [
                 kSecClass: kSecClassGenericPassword,
                 kSecAttrService: self.service,
-                kSecAttrAccount: key.identifier
+                kSecAttrAccount: key.identifier,
+                kSecUseDataProtectionKeychain: true,
             ]
             
             let payload: [String: Any] = [kSecValueData as String: newValue]
@@ -80,10 +82,11 @@ extension Keychain {
     ///
     /// - throws: `KeychainError` when the process failed.
     public func remove<T>(_ key: Keychain.Key<T>) async throws(KeychainError) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: self.service,
-            kSecAttrAccount as String: key.identifier
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: self.service,
+            kSecAttrAccount: key.identifier,
+            kSecUseDataProtectionKeychain: true
         ]
         
         let status = SecItemDelete(query as CFDictionary)
