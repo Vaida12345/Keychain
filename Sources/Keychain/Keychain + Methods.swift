@@ -56,7 +56,7 @@ extension Keychain {
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status != errSecSuccess else { return }
         
-        if status == -25299 {
+        if status == errSecDuplicateItem {
             // update the entry
             let query: [CFString: Any] = [
                 kSecClass: kSecClassGenericPassword,
@@ -92,7 +92,25 @@ extension Keychain {
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else { throw KeychainError(status: status) }
     }
-    
+
+
+    /// Checks whether an entry exists for the given key.
+    ///
+    /// - Parameters:
+    ///   - key: The key to check.
+    public func contains<T>(_ key: Keychain.Key<T>) -> Bool {
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: self.service,
+            kSecAttrAccount: key.identifier,
+            kSecMatchLimit: kSecMatchLimitOne,
+            kSecReturnData: false,
+            kSecUseDataProtectionKeychain: true,
+        ]
+
+        return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
+    }
+
 }
 
 
@@ -109,7 +127,10 @@ extension Keychain {
     @inlinable
     public func load(_ key: Keychain.Key<String>) async throws(KeychainError) -> String {
         let data = try await self.load(Key<Data>(key.identifier))
-        return String(data: data, encoding: .utf8)!
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw KeychainError(status: errSecDecode)
+        }
+        return string
     }
     
     
@@ -124,7 +145,10 @@ extension Keychain {
     /// - throws: `KeychainError` when the `newValue` cannot be stored in keychain.
     @inlinable
     public func update(_ key: Keychain.Key<String>, to newValue: String) async throws(KeychainError) {
-        try await self.update(Key<Data>(key.identifier), to: newValue.data(using: .utf8)!)
+        guard let data = newValue.data(using: .utf8) else {
+            throw KeychainError(status: errSecParam)
+        }
+        try await self.update(Key<Data>(key.identifier), to: data)
     }
     
 }

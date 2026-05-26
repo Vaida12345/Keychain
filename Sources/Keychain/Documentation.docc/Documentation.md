@@ -4,7 +4,7 @@ A type-safe wrapper to Keychain Service.
 
 ## Overview
 
-The `Keychain` struct comes with a set of methods for your to interact with the keychain service.
+The `Keychain` struct comes with a set of methods for you to interact with the keychain service.
 ```swift
 // updates and stores "12345"
 try await Keychain.standard.update(.password, to: "12345")

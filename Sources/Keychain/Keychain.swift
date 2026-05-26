@@ -36,6 +36,8 @@ import Security
 /// ```
 ///
 /// - Warning: You must not reuse an identifier, doing so will cause undefined behavior.
+///
+/// This wrapper uses `kSecUseDataProtectionKeychain` by default, which means keychain entries are only accessible when the device is unlocked. Background tasks that need keychain access while the device is locked should use a ``service(_:)`` instance and build custom queries instead.
 public struct Keychain {
     
     @usableFromInline

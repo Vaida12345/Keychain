@@ -41,7 +41,7 @@ enum StringRaw: String {
         
         try await Keychain.standard.remove(.password)
         await #expect(throws: KeychainError.self) {
-            let _ = try await Keychain.standard.load(.password)
+            _ = try await Keychain.standard.load(.password)
         }
     }
     
@@ -51,7 +51,7 @@ enum StringRaw: String {
         
         try await Keychain.standard.remove(.integer)
         await #expect(throws: KeychainError.self) {
-            let _ = try await Keychain.standard.load(.integer)
+            _ = try await Keychain.standard.load(.integer)
         }
     }
     
@@ -64,7 +64,7 @@ enum StringRaw: String {
         
         try await Keychain.standard.remove(.integer)
         await #expect(throws: KeychainError.self) {
-            let _ = try await Keychain.standard.load(.integer)
+            _ = try await Keychain.standard.load(.integer)
         }
     }
     
@@ -75,7 +75,7 @@ enum StringRaw: String {
         
         try await Keychain.standard.remove(.stringRaw)
         await #expect(throws: KeychainError.self) {
-            let _ = try await Keychain.standard.load(.stringRaw)
+            _ = try await Keychain.standard.load(.stringRaw)
         }
     }
     
@@ -85,7 +85,7 @@ enum StringRaw: String {
         
         try await Keychain.standard.remove(.integerRaw)
         await #expect(throws: KeychainError.self) {
-            let _ = try await Keychain.standard.load(.integerRaw)
+            _ = try await Keychain.standard.load(.integerRaw)
         }
     }
     

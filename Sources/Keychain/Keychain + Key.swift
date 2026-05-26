@@ -10,7 +10,7 @@ import Foundation
 
 extension Keychain {
     
-    /// A key for defaults lookup
+    /// A key for keychain lookup
     ///
     /// This structure uses the primary associated value to indicate the type of the associated value.
     ///
@@ -27,7 +27,7 @@ extension Keychain {
 
 extension Keychain.Key {
     
-    /// Initialize a new defaults key.
+    /// Initialize a new key.
     ///
     /// - Parameters:
     ///   - identifier: The identifier for the given key.
@@ -36,7 +36,7 @@ extension Keychain.Key {
         self.identifier = identifier
     }
     
-    /// Initialize a new defaults key.
+    /// Initialize a new key.
     ///
     /// - Parameters:
     ///   - identifier: The identifier for the given key.
@@ -45,7 +45,7 @@ extension Keychain.Key {
         self.identifier = identifier
     }
     
-    /// Initialize a new defaults key.
+    /// Initialize a new key.
     ///
     /// - Parameters:
     ///   - identifier: The identifier for the given key.
@@ -54,7 +54,7 @@ extension Keychain.Key {
         self.identifier = identifier
     }
     
-    /// Initialize a new defaults key.
+    /// Initialize a new key.
     ///
     /// - Parameters:
     ///   - identifier: The identifier for the given key.
@@ -63,7 +63,7 @@ extension Keychain.Key {
         self.identifier = identifier
     }
     
-    /// Initialize a new defaults key.
+    /// Initialize a new key.
     ///
     /// - Parameters:
     ///   - identifier: The identifier for the given key.
