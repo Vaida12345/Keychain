@@ -46,13 +46,12 @@ extension Keychain {
     public func update(_ key: Keychain.Key<Data>, to newValue: Data) async throws(KeychainError) {
         let query = self.query(for: key, valueData: newValue)
 
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status != errSecSuccess else {
 #if os(macOS)
-            try self.removeLegacyItemIfPresent(key)
+        // must remove first, as it seems legacy and new one share the same delete query.
+        try? self.removeLegacyItemIfPresent(key)
 #endif
-            return
-        }
+        let status = SecItemAdd(query as CFDictionary, nil)
+        if status == errSecSuccess { return }
 
         if status == errSecDuplicateItem {
             // update the entry
