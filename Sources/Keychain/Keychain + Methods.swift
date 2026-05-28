@@ -20,23 +20,22 @@ extension Keychain {
     ///
     /// - throws: `KeychainError` when the entry cannot be located.
     public func load(_ key: Keychain.Key<Data>) async throws(KeychainError) -> Data {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: self.service,
-            kSecAttrAccount: key.identifier,
-            kSecMatchLimit: kSecMatchLimitOne,
-            kSecReturnData: true,
-            kSecUseDataProtectionKeychain: true,
-        ]
-        
+        let query = self.query(for: key, returnData: true)
+
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+#if os(macOS)
+        if status == errSecItemNotFound {
+            return try await self.loadLegacyItemAndMigrate(key)
+        }
+#endif
+
         guard status == errSecSuccess, let data = item as? Data else { throw KeychainError(status: status) }
-        
         return data
     }
-    
-    
+
+
     /// Updates the value stored in keychain service for the given key, or adds a new entry if the key does not exist.
     ///
     /// - Parameters:
@@ -45,36 +44,33 @@ extension Keychain {
     ///
     /// - throws: `KeychainError` when the `newValue` cannot be stored in keychain.
     public func update(_ key: Keychain.Key<Data>, to newValue: Data) async throws(KeychainError) {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: self.service,
-            kSecAttrAccount: key.identifier,
-            kSecValueData: newValue,
-            kSecUseDataProtectionKeychain: true
-        ]
-        
+        let query = self.query(for: key, valueData: newValue)
+
         let status = SecItemAdd(query as CFDictionary, nil)
-        guard status != errSecSuccess else { return }
-        
+        guard status != errSecSuccess else {
+#if os(macOS)
+            try self.removeLegacyItemIfPresent(key)
+#endif
+            return
+        }
+
         if status == errSecDuplicateItem {
             // update the entry
-            let query: [CFString: Any] = [
-                kSecClass: kSecClassGenericPassword,
-                kSecAttrService: self.service,
-                kSecAttrAccount: key.identifier,
-                kSecUseDataProtectionKeychain: true,
-            ]
-            
+            let query = self.query(for: key)
+
             let payload: [String: Any] = [kSecValueData as String: newValue]
-            
+
             let status = SecItemUpdate(query as CFDictionary, payload as CFDictionary)
             guard status == errSecSuccess else { throw KeychainError(status: status) }
+#if os(macOS)
+            try self.removeLegacyItemIfPresent(key)
+#endif
         } else {
             throw KeychainError(status: status)
         }
     }
-    
-    
+
+
     /// Removes the entry associated with `key` from the keychain service
     ///
     /// - Parameters:
@@ -82,15 +78,17 @@ extension Keychain {
     ///
     /// - throws: `KeychainError` when the process failed.
     public func remove<T>(_ key: Keychain.Key<T>) async throws(KeychainError) {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: self.service,
-            kSecAttrAccount: key.identifier,
-            kSecUseDataProtectionKeychain: true
-        ]
-        
+        let query = self.query(for: key)
+
         let status = SecItemDelete(query as CFDictionary)
+#if os(macOS)
+        let legacyStatus = self.removeLegacyItem(key)
+        guard status == errSecSuccess || legacyStatus == errSecSuccess else {
+            throw KeychainError(status: status == errSecItemNotFound ? legacyStatus : status)
+        }
+#else
         guard status == errSecSuccess else { throw KeychainError(status: status) }
+#endif
     }
 
 
@@ -99,17 +97,86 @@ extension Keychain {
     /// - Parameters:
     ///   - key: The key to check.
     public func contains<T>(_ key: Keychain.Key<T>) -> Bool {
-        let query: [CFString: Any] = [
+        let query = self.query(for: key)
+
+        let status = SecItemCopyMatching(query as CFDictionary, nil)
+#if os(macOS)
+        return status == errSecSuccess || self.containsLegacyItem(key)
+#else
+        return status == errSecSuccess
+#endif
+    }
+
+}
+
+
+// MARK: - Queries
+
+private extension Keychain {
+
+    func query<T>(for key: Keychain.Key<T>, returnData: Bool = false, valueData: Data? = nil) -> [CFString: Any] {
+        var query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: self.service,
             kSecAttrAccount: key.identifier,
-            kSecMatchLimit: kSecMatchLimitOne,
-            kSecReturnData: false,
-            kSecUseDataProtectionKeychain: true,
+            kSecUseDataProtectionKeychain: true
         ]
 
-        return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
+        if returnData {
+            query[kSecMatchLimit] = kSecMatchLimitOne
+            query[kSecReturnData] = true
+        }
+
+        if let valueData {
+            query[kSecValueData] = valueData
+        }
+
+        return query
     }
+
+#if os(macOS)
+    func legacyQuery<T>(for key: Keychain.Key<T>, returnData: Bool = false) -> [CFString: Any] {
+        var query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: self.service,
+            kSecAttrAccount: key.identifier,
+        ]
+
+        if returnData {
+            query[kSecMatchLimit] = kSecMatchLimitOne
+            query[kSecReturnData] = true
+        }
+
+        return query
+    }
+
+    func loadLegacyItemAndMigrate(_ key: Keychain.Key<Data>) async throws(KeychainError) -> Data {
+        let query = self.legacyQuery(for: key, returnData: true)
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess, let data = item as? Data else { throw KeychainError(status: status) }
+
+        try await self.update(key, to: data)
+        return data
+    }
+
+    func containsLegacyItem<T>(_ key: Keychain.Key<T>) -> Bool {
+        SecItemCopyMatching(self.legacyQuery(for: key) as CFDictionary, nil) == errSecSuccess
+    }
+
+    @discardableResult
+    func removeLegacyItem<T>(_ key: Keychain.Key<T>) -> OSStatus {
+        SecItemDelete(self.legacyQuery(for: key) as CFDictionary)
+    }
+
+    func removeLegacyItemIfPresent<T>(_ key: Keychain.Key<T>) throws(KeychainError) {
+        let status = self.removeLegacyItem(key)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw KeychainError(status: status)
+        }
+    }
+#endif
 
 }
 
